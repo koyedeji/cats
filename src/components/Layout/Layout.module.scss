@@ -1,0 +1,15 @@
+/* autoprefixer grid: autoplace */
+.layout {
+  display: grid;
+  min-height: 100vh;
+  grid-template-areas: "head" "main" "footer";
+  grid-template-columns: minmax(0px, 1fr);
+  grid-template-rows: auto minmax(0px, 1fr) auto;
+}
+
+
+
+.layout main {
+  grid-area: main;
+
+}

@@ -1,0 +1,55 @@
+/* autoprefixer grid: autoplace */
+.root {
+   display: grid;
+   grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+   grid-row-gap: 40px;
+   grid-column-gap: 10px;
+   overflow: hidden;
+}
+
+.top {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+}
+
+.img  {
+  max-width: 100%;
+  display: block;
+  height: auto;
+}
+
+.container {
+  position: relative;
+  overflow: hidden;
+  max-width: 100%;
+  width: 100%;
+  box-shadow: -8px 22px 69px -45px rgba(46,74,117,1);
+
+  @media(min-width: 600px) {
+    max-width: 340px;
+    width: auto;
+  }
+}
+
+.bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 10px;
+}
+
+.btn {
+  vertical-align: middle;
+  line-height: 0;
+  font-size: 3rem;
+}
+
+.count {
+   margin-bottom: 0;
+   font-size: 2rem;
+}
+
+.separator {
+   border-top: 1px solid var(--greyVeryLight);
+}

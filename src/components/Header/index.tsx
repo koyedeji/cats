@@ -1,20 +1,28 @@
-import React, { FC } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import s from "./Header.module.scss";
 import cn from "classnames";
 
 function Header() {
-  const rootClassNames = cn("container", s.root);
+  const rootClassNames = cn(s.root);
   return (
     <header className={rootClassNames}>
-      <div className={cn(s.logo)}>
-        <Link to="/">Home</Link>
+      <div className={cn("container")}>
+        <div className={cn(s.wrapper)}>
+          <div className={cn(s.logo)}>
+            <Link className={cn(s.logoText)} to="/">
+              Home
+            </Link>
+          </div>
+          <ul className={cn(s.navigations)}>
+            <li>
+              <Link to="/upload">Upload</Link>
+            </li>
+          </ul>
+        </div>
       </div>
-      <ul className={cn(s.navigations)}>
-        <li>
-          <Link to="/">Upload</Link>
-        </li>
-      </ul>
     </header>
   );
 }
+
+export default Header;

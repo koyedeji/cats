@@ -1,0 +1,62 @@
+.root {}
+
+.wrapper {
+   border: 1px solid var(--greyVeryLight);
+   display: grid;
+   grid-template-columns: minmax(0px, 1fr);
+   grid-template-rows: 50px auto 50px;
+   border-radius: 10px;
+
+   justify-content: space-between;
+}
+
+.imgContainer {
+    background: tomato;
+}
+
+.imgContainer  img {
+   display: block;
+   width: 100%;
+   height: auto;
+
+
+   @media(min-width: 600px) {
+       height: 100%;
+   }
+}
+
+
+.header {
+    justify-content: flex-end;
+}
+
+.inputWrapper {
+   justify-content: center;
+   font-size: 1.6rem;
+}
+
+.inputWrapper input {
+    visibility: hidden;
+    width: 0;
+}
+
+.inputWrapper label {
+   cursor: pointer;
+   transition: 0.2s ease;
+   transition-property: transform;
+   font-weight: 600;
+   &:hover {
+      transform: translateY(-1px);
+   }
+
+   &:active {
+      transform: translateY(1px);
+   }
+}
+
+.header,
+.inputWrapper {
+   display: flex;
+   padding: 0 1rem;
+   align-items: center;
+}
