@@ -172,7 +172,6 @@ export const CatProvider: FC = ({ children }) => {
         CatAPI.get("favourites?limit=50"),
         CatAPI.get("votes?limit=50"),
       ]);
-
       dispatch({
         type: ActionType.CATS_REQUEST,
         payload: mapResponse({ images, favourites, votes } as ResponseMapper),
