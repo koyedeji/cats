@@ -7,7 +7,8 @@ import React, {
   SyntheticEvent,
   FC,
 } from "react";
-import * as CatAPI from "api/catApi";
+
+import api from "api";
 
 interface ResponseMapper {
   images: [];
@@ -15,6 +16,26 @@ interface ResponseMapper {
   votes: [];
   img?: Record<string, any>;
 }
+
+interface State {
+  cats: null | Record<string, any>;
+  error: string;
+}
+
+enum ActionType {
+  CATS_REQUEST,
+  CATS_REQUEST_ERROR,
+  CAT_FAVOURITE,
+  CAT_UNFAVOURITE,
+  CAT_UP_VOTE,
+  CAT_DOWN_VOTE,
+}
+
+// Api initialization
+const catApi = api.create({
+  baseUrl: "https://api.thecatapi.com/v1/",
+  headers: { "x-api-key": "9daa1266-85a5-4600-bef2-9e4fd71dcfa8" },
+});
 
 // @ts-ignore
 const mapFavouritesAndToImage = ({ favourites, votes, img }) => {
@@ -46,20 +67,6 @@ const mapResponse = ({ images, favourites, votes }: ResponseMapper) => {
     {}
   );
 };
-
-interface State {
-  cats: null | Record<string, any>;
-  error: string;
-}
-
-enum ActionType {
-  CATS_REQUEST,
-  CATS_REQUEST_ERROR,
-  CAT_FAVOURITE,
-  CAT_UNFAVOURITE,
-  CAT_UP_VOTE,
-  CAT_DOWN_VOTE,
-}
 
 type Actions =
   | { type: ActionType.CATS_REQUEST; payload: Record<string, any> }
@@ -164,13 +171,12 @@ CatContext.displayName = "CatProvider";
 export const CatProvider: FC = ({ children }) => {
   const [state, dispatch] = useReducer(catReducer, initialState);
 
-  // TODO: Show error notification for the related image
   const getCats = useCallback(async () => {
     try {
       const [images, favourites, votes] = await Promise.all([
-        CatAPI.get("images?limit=50"),
-        CatAPI.get("favourites?limit=50"),
-        CatAPI.get("votes?limit=50"),
+        catApi.get("images", { limit: 50 }),
+        catApi.get("favourites", { limit: 50 }),
+        catApi.get("votes", { limit: 50 }),
       ]);
       dispatch({
         type: ActionType.CATS_REQUEST,
@@ -187,9 +193,13 @@ export const CatProvider: FC = ({ children }) => {
       const image_id = e.currentTarget.getAttribute("data-cat-id");
       const cat = state.cats![image_id!];
       try {
-        const response = await CatAPI.post("favourites", {
-          image_id: cat.id,
-        });
+        const response = await catApi.post(
+          "favourites",
+          {
+            image_id: cat.id,
+          },
+          { "Content-Type": "application/json" }
+        );
         dispatch({
           type: ActionType.CAT_FAVOURITE,
           payload: { id: cat.id, favourite_id: response.id as string },
@@ -202,7 +212,6 @@ export const CatProvider: FC = ({ children }) => {
     [state]
   );
 
-  // TODO: Show error notification for the related image
   const handleUnFavourite = useCallback(
     async (e: SyntheticEvent<HTMLButtonElement, MouseEvent>) => {
       e.preventDefault();
@@ -210,62 +219,76 @@ export const CatProvider: FC = ({ children }) => {
       const catId = e.currentTarget.getAttribute("data-cat-id");
       const cat = state.cats![catId!];
       try {
-        await CatAPI.remove(`favourites/${favourite_id}`);
+        await catApi.delete(`favourites/${favourite_id}`);
         dispatch({
           type: ActionType.CAT_UNFAVOURITE,
           payload: { id: cat.id },
         });
       } catch (err) {
-        // TODO: dispatch common error state here with the image id
         throw err;
       }
     },
     [state]
   );
 
-  // TODO: Show error notification for the related image
-  const handleUpVote = async (
-    event: SyntheticEvent<HTMLButtonElement, MouseEvent>
-  ) => {
-    event.preventDefault();
-    const catId = event.currentTarget.getAttribute("data-cat-id");
+  const handleUpVote = useCallback(
+    async (event: SyntheticEvent<HTMLButtonElement, MouseEvent>) => {
+      event.preventDefault();
+      const catId = event.currentTarget.getAttribute("data-cat-id");
 
+      try {
+        const cat = state.cats![catId!];
+        const response = await catApi.post(
+          "votes",
+          {
+            image_id: catId,
+            value: 1,
+          },
+          { "Content-Type": "application/json" }
+        );
+        dispatch({
+          type: ActionType.CAT_UP_VOTE,
+          payload: { id: cat.id, voteId: response.id as string },
+        });
+      } catch (err) {
+        throw err;
+      }
+    },
+    [state]
+  );
+
+  const handleDownVote = useCallback(
+    async (event: SyntheticEvent<HTMLButtonElement, MouseEvent>) => {
+      event.preventDefault();
+      const catId = event.currentTarget.getAttribute("data-cat-id");
+
+      try {
+        const cat = state.cats![catId!];
+        const response = await catApi.post(
+          "votes",
+          {
+            image_id: catId,
+            value: 0,
+          },
+          {
+            "Content-Type": "application/json",
+          }
+        );
+        dispatch({
+          type: ActionType.CAT_DOWN_VOTE,
+          payload: { id: cat.id, voteId: response.id as string },
+        });
+      } catch (err) {
+        throw err;
+      }
+    },
+    [state]
+  );
+
+  const handleUpload = async (formData: FormData) => {
     try {
-      const cat = state.cats![catId!];
-      const response = await CatAPI.post("votes", {
-        image_id: catId,
-        value: 1,
-      });
-      dispatch({
-        type: ActionType.CAT_UP_VOTE,
-        payload: { id: cat.id, voteId: response.id as string },
-      });
+      const response = await catApi.post("images/upload", formData);
     } catch (err) {
-      // TODO: dispatch common error state here with the image id
-      throw err;
-    }
-  };
-
-  // TODO: Show error notification for the related image
-  const handleDownVote = async (
-    event: SyntheticEvent<HTMLButtonElement, MouseEvent>
-  ) => {
-    event.preventDefault();
-    const catId = event.currentTarget.getAttribute("data-cat-id"); // increnment or decrement
-
-    try {
-      const cat = state.cats![catId!];
-
-      const response = await CatAPI.post("votes", {
-        image_id: catId,
-        value: 0,
-      });
-      dispatch({
-        type: ActionType.CAT_DOWN_VOTE,
-        payload: { id: cat.id, voteId: response.id as string },
-      });
-    } catch (err) {
-      // TODO: dispatch common error state here with the image id
       throw err;
     }
   };
@@ -278,8 +301,9 @@ export const CatProvider: FC = ({ children }) => {
       handleUnFavourite,
       handleUpVote,
       handleDownVote,
+      handleUpload,
     }),
-    [getCats, handleFavourite, handleUnFavourite, state]
+    [state]
   );
 
   return <CatContext.Provider value={value}>{children}</CatContext.Provider>;
