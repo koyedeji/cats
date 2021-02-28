@@ -1,7 +1,8 @@
 import React, { ChangeEvent, SyntheticEvent, useState } from "react";
+import Spinner from "components/Spinner";
 import { useHistory } from "react-router-dom";
 import cn from "classnames";
-import * as CatApi from "api/catApi";
+import { useCats } from "contexts/catContext";
 import s from "./Upload.module.scss";
 
 interface ImgState {
@@ -17,14 +18,15 @@ const UpLoadPage = () => {
     imgUrl: "",
     error: "",
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const { handleUpload } = useCats();
 
-  // TODO: Show loading indication when uploading from computer
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files![0]) {
       return;
     }
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       if (reader.readyState === 2) {
         setImageObj((prev) => ({
           ...prev,
@@ -37,19 +39,26 @@ const UpLoadPage = () => {
     reader.readAsDataURL(event.target.files![0]);
   };
 
-  // TODO: Show loading indication when uploading to the server
-  const handleUpload = async (e: SyntheticEvent<HTMLButtonElement>) => {
+  const onUpload = async (e: SyntheticEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    const { file } = imgObj;
-    const { error } = await CatApi.upload("images/upload", {
-      file,
-    });
-
-    if (error) {
-      setImageObj((prev) => ({ ...prev, error: error }));
-      return;
+    setIsLoading(true);
+    const formData = new FormData();
+    formData.append("file", imgObj.file!);
+    try {
+      await handleUpload(formData);
+      setImageObj({
+        file: null,
+        imgUrl: "",
+        error: "",
+      });
+      setIsLoading(false);
+      await history.push("/");
+    } catch (err) {
+      setImageObj((prev) => ({
+        ...prev,
+        error: "Something went wrong",
+      }));
     }
-    history.push("/");
   };
 
   const rootClassnames = cn("container", s.root);
@@ -63,7 +72,13 @@ const UpLoadPage = () => {
         <div className="container-sm">
           <div className={s.wrapper}>
             <div className={cn(s.header)}>
-              <button onClick={handleUpload} type="button" disabled={!imgUrl}>
+              <Spinner className={cn(s.spinner)} isLoading={isLoading} />
+              <button
+                className={s.uploadBtn}
+                onClick={onUpload}
+                type="button"
+                disabled={!imgUrl || isLoading}
+              >
                 upload
               </button>
             </div>
