@@ -77,7 +77,7 @@ const UpLoadPage = () => {
                 className={s.uploadBtn}
                 onClick={onUpload}
                 type="button"
-                disabled={!imgUrl}
+                disabled={!imgUrl || isLoading}
               >
                 upload
               </button>

@@ -20,11 +20,17 @@ interface ResponseMapper {
 interface State {
   cats: null | Record<string, any>;
   error: string;
+  commonError: {
+    id: string;
+    message: string;
+  };
 }
 
 enum ActionType {
   CATS_REQUEST,
   CATS_REQUEST_ERROR,
+  CAT_COMMON_ERROR,
+  CAT_COMMON_ERROR_CLEAR,
   CAT_FAVOURITE,
   CAT_UNFAVOURITE,
   CAT_UP_VOTE,
@@ -41,13 +47,13 @@ const catApi = api.create({
 const mapFavouritesAndToImage = ({ favourites, votes, img }) => {
   const result = {
     hasFavourite: false,
-    favourite_id: "",
+    favouriteId: "",
     votes: [],
     voteId: "",
   };
   const favourite = favourites.find((item: any) => item.image_id === img.id);
   if (favourite) {
-    result.favourite_id = favourite.id;
+    result.favouriteId = favourite.id;
     result.hasFavourite = true;
   }
   result.votes = votes.filter((item: any) => item.image_id === img.id);
@@ -73,7 +79,7 @@ type Actions =
   | { type: ActionType.CATS_REQUEST_ERROR; payload: string }
   | {
       type: ActionType.CAT_FAVOURITE;
-      payload: { id: string; favourite_id: string };
+      payload: { id: string; favouriteId: string };
     }
   | { type: ActionType.CAT_UNFAVOURITE; payload: { id: string } }
   | {
@@ -83,11 +89,22 @@ type Actions =
   | {
       type: ActionType.CAT_DOWN_VOTE;
       payload: { id: string; voteId: string | number };
+    }
+  | {
+      type: ActionType.CAT_COMMON_ERROR;
+      payload: { id: string; message: string };
+    }
+  | {
+      type: ActionType.CAT_COMMON_ERROR_CLEAR;
     };
 
 const initialState: State = {
   error: "",
   cats: null,
+  commonError: {
+    id: "",
+    message: "",
+  },
 };
 
 const catReducer = (state: State, action: Actions) => {
@@ -102,6 +119,19 @@ const catReducer = (state: State, action: Actions) => {
         ...state,
         cats: action.payload,
       };
+    case ActionType.CAT_COMMON_ERROR:
+      return {
+        ...state,
+        commonError: {
+          ...state.commonError,
+          ...action.payload,
+        },
+      };
+    case ActionType.CAT_COMMON_ERROR_CLEAR:
+      return {
+        ...state,
+        commonError: initialState.commonError,
+      };
     case ActionType.CAT_FAVOURITE:
       const favouriteCat = state.cats![action.payload.id];
       return {
@@ -110,7 +140,7 @@ const catReducer = (state: State, action: Actions) => {
           ...state.cats,
           [action.payload.id]: {
             ...favouriteCat,
-            favourite_id: action.payload.favourite_id,
+            favouriteId: action.payload.favouriteId,
             hasFavourite: true,
           },
         },
@@ -183,14 +213,16 @@ export const CatProvider: FC = ({ children }) => {
         payload: mapResponse({ images, favourites, votes } as ResponseMapper),
       });
     } catch (error) {
-      console.log(error);
+      dispatch({
+        type: ActionType.CATS_REQUEST_ERROR,
+        payload: "something went wrong",
+      });
     }
   }, []);
 
-  // TODO: Show error notification for the related image
   const handleFavourite = useCallback(
     async (e: SyntheticEvent<HTMLButtonElement, MouseEvent>) => {
-      const image_id = e.currentTarget.getAttribute("data-cat-id");
+      const image_id = e.currentTarget.getAttribute("data-cat-id")!;
       const cat = state.cats![image_id!];
       try {
         const response = await catApi.post(
@@ -202,11 +234,13 @@ export const CatProvider: FC = ({ children }) => {
         );
         dispatch({
           type: ActionType.CAT_FAVOURITE,
-          payload: { id: cat.id, favourite_id: response.id as string },
+          payload: { id: cat.id, favouriteId: response.id as string },
         });
       } catch (err) {
-        // TODO: dispatch common error state here with the image id
-        throw err;
+        dispatch({
+          type: ActionType.CAT_COMMON_ERROR,
+          payload: { id: image_id!, message: "Favourite not available" },
+        });
       }
     },
     [state]
@@ -225,7 +259,10 @@ export const CatProvider: FC = ({ children }) => {
           payload: { id: cat.id },
         });
       } catch (err) {
-        throw err;
+        dispatch({
+          type: ActionType.CAT_COMMON_ERROR,
+          payload: { id: catId!, message: "Favourite not available" },
+        });
       }
     },
     [state]
@@ -251,7 +288,10 @@ export const CatProvider: FC = ({ children }) => {
           payload: { id: cat.id, voteId: response.id as string },
         });
       } catch (err) {
-        throw err;
+        dispatch({
+          type: ActionType.CAT_COMMON_ERROR,
+          payload: { id: catId!, message: "Vote not available" },
+        });
       }
     },
     [state]
@@ -279,19 +319,28 @@ export const CatProvider: FC = ({ children }) => {
           payload: { id: cat.id, voteId: response.id as string },
         });
       } catch (err) {
-        throw err;
+        dispatch({
+          type: ActionType.CAT_COMMON_ERROR,
+          payload: { id: catId!, message: "Vote not available" },
+        });
       }
     },
     [state]
   );
 
-  const handleUpload = async (formData: FormData) => {
+  const clearCommonError = () => {
+    dispatch({
+      type: ActionType.CAT_COMMON_ERROR_CLEAR,
+    });
+  };
+
+  const handleUpload = useCallback(async (formData: FormData) => {
     try {
       const response = await catApi.post("images/upload", formData);
     } catch (err) {
       throw err;
     }
-  };
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -302,7 +351,9 @@ export const CatProvider: FC = ({ children }) => {
       handleUpVote,
       handleDownVote,
       handleUpload,
+      clearCommonError,
     }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [state]
   );
 

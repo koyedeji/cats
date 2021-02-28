@@ -11,7 +11,7 @@ function Header() {
         <div className={cn(s.wrapper)}>
           <div className={cn(s.logo)}>
             <Link className={cn(s.logoText)} to="/">
-              Home
+              Cats
             </Link>
           </div>
           <ul className={cn(s.navigations)}>
